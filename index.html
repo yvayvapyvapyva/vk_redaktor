@@ -153,7 +153,7 @@ body {
 <body>
 
 <div id="toast">Готово</div>
-<div id="welcomeScreen"><div class="welcome-card"><h2 style="margin: 0 0 8px 0; font-weight:800;">Route Editor</h2><div id="userIdBadge" style="background:rgba(255,255,255,0.12);color:#d1d5db;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;display:inline-block;margin-bottom:18px;border:1px solid rgba(255,255,255,0.2)">Загрузка...</div><div style="font-size:13px; color:#c7c9d1; margin-top:6px;">Авторизация через VK Mini Apps...</div></div></div>
+<div id="welcomeScreen"><div class="welcome-card"><h2 style="margin: 0 0 8px 0; font-weight:800;">Route Editor</h2><div id="userIdBadge" style="background:rgba(255,255,255,0.12);color:#d1d5db;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;display:inline-block;margin-bottom:18px;border:1px solid rgba(255,255,255,0.2)">Загрузка...</div><div style="font-size:13px; color:#c7c9d1; margin-top:6px; margin-bottom:16px;">Введите GitHub токен для доступа к маршрутам</div><div class="input-wrapper" style="margin-bottom:12px;"><input type="password" id="tokenInput" placeholder="Введите токен (минимум 10 символов)" style="width:100%; padding:14px; border:none; font-size:16px; outline:none; background:transparent; color:#f5f7fa; font-family:inherit; box-sizing:border-box;"></div><button id="saveTokenBtn" class="btn-action" onclick="saveToken()" style="width:100%;">Войти</button></div></div>
 <div id="map"></div>
 <div class="top-controls" id="uiControls" style="display:none">
     <button id="listPointsBtn" class="btn-top" onclick="openPointsOrderModal()" style="visibility:hidden">
@@ -178,12 +178,10 @@ body {
 <div id="listColorDropdown" class="color-dropdown"></div>
 
 <div id="pointsOrderModal" class="modal" onclick="if(event.target===this) toggleM('pointsOrderModal')"><div class="modal-content"><div class="modal-header"><h3 id="orderModalTitle">Маршрут</h3><button class="close-circle" onclick="toggleM('pointsOrderModal')">✕</button></div><div class="editor-section" id="pointsSortList"></div><div style="padding: 20px;"><button id="saveInListBtn" class="btn-action" onclick="handleModalSave()"><span id="saveBtnText">Готово</span></button></div></div></div>
-<div id="settingsModal" class="modal settings-sheet" onclick="if(event.target===this) toggleM('settingsModal')"><div class="modal-content"><div class="settings-header"><div style="flex:1; min-width:0;"><h3>Настройки</h3></div><button class="close-circle" onclick="toggleM('settingsModal')">✕</button></div><div class="editor-section settings-body"><div class="settings-section"><select id="settingsRouteSelect" class="settings-route-select"><option value="">Выберите маршрут</option></select></div><div id="fileActions" class="settings-section" style="display:none;"><div class="settings-tools"><button class="settings-tool-btn" onclick="renameActiveRoute()">✏️ Переименовать маршрут</button><button class="settings-tool-btn" onclick="shareActiveRoute()">🔗 Скопировать ссылку на маршрут</button><button class="settings-tool-btn settings-tool-btn-danger" onclick="deleteActiveRoute()">🗑️ Удалить маршрут</button><button class="settings-tool-btn settings-tool-btn-green settings-tool-btn-wide" onclick="launchNavigatorWithCurrentRoute()">Открыть в навигаторе</button></div></div></div></div></div>
+<div id="settingsModal" class="modal settings-sheet" onclick="if(event.target===this) toggleM('settingsModal')"><div class="modal-content"><div class="settings-header"><div style="flex:1; min-width:0;"><h3>Настройки</h3></div><button class="close-circle" onclick="toggleM('settingsModal')">✕</button></div><div class="editor-section settings-body"><div class="settings-section"><select id="settingsRouteSelect" class="settings-route-select"><option value="">Выберите маршрут</option></select></div><div id="fileActions" class="settings-section" style="display:none;"><div class="settings-tools"><button class="settings-tool-btn" onclick="renameActiveRoute()">✏️ Переименовать маршрут</button><button class="settings-tool-btn" onclick="shareActiveRoute()">🔗 Скопировать ссылку на маршрут</button><button class="settings-tool-btn settings-tool-btn-danger" onclick="deleteActiveRoute()">🗑️ Удалить маршрут</button><button class="settings-tool-btn settings-tool-btn-green settings-tool-btn-wide" onclick="launchNavigatorWithCurrentRoute()">Открыть в навигаторе</button></div></div></div><div class="settings-section"><div class="settings-tools"><button class="settings-tool-btn settings-tool-btn-danger" onclick="logout()">🚪 Выйти (сбросить токен)</button></div></div></div></div>
 
 <script>
 (function (global) {
-  const TOKEN_SUFFIX = "AEIlGh23bO2ygpYMlJrB9MOA42UceJ";
-
   const byId = (id) => document.getElementById(id);
   const round6 = (n) => Math.round(n * 1e6) / 1e6;
 
@@ -206,8 +204,15 @@ body {
   }
 
   function getTokenFromUrl() {
-    const prefix = (new URLSearchParams(global.location.search).get('vk_app_id') || '').slice(0, 10);
-    return prefix.length < 10 ? null : prefix + TOKEN_SUFFIX;
+    return localStorage.getItem('github_token') || null;
+  }
+
+  function saveTokenToStorage(token) {
+    localStorage.setItem('github_token', token);
+  }
+
+  function clearTokenFromStorage() {
+    localStorage.removeItem('github_token');
   }
 
   function buildInitFileContent(extra = {}) {
@@ -250,20 +255,21 @@ body {
   }
 
   global.AppShared = {
-    TOKEN_SUFFIX,
     byId,
     round6,
     getVKBridge,
     getVKUser,
     getUserIdentity,
     getTokenFromUrl,
+    saveTokenToStorage,
+    clearTokenFromStorage,
     buildInitFileContent,
     apiRequest
   };
 })(window);
 </script>
 <script>
-const { byId, round6, getVKBridge, getUserIdentity, getTokenFromUrl, buildInitFileContent, apiRequest } = window.AppShared;
+const { byId, round6, getVKBridge, getUserIdentity, getTokenFromUrl, saveTokenToStorage, clearTokenFromStorage, buildInitFileContent, apiRequest } = window.AppShared;
 const $ = byId;
 const f6 = round6;
 const vk = getVKBridge();
@@ -420,12 +426,7 @@ ymaps.ready(async () => {
     localStorage.removeItem('gh_t_optimized');
     const settingsRouteSelect = $('settingsRouteSelect');
     if (settingsRouteSelect) settingsRouteSelect.addEventListener('change', onSettingsRouteSelect);
-    const resolvedToken = getTokenFromUrl();
-    if (!resolvedToken) {
-        showToast("Ошибка: параметр vk_app_id должен содержать минимум 10 символов", 'error', 3200);
-        return;
-    }
-    authToken = resolvedToken;
+    
     handleInitialAuth();
 });
 
@@ -472,35 +473,72 @@ const getRouteFromUrl = () => {
     return normalized;
 };
 const handleInitialAuth = async () => {
+    const token = getTokenFromUrl();
+    if (!token || token.length < 10) {
+        $('welcomeScreen').style.display = 'flex';
+        $('uiControls').style.display = 'none';
+        $('bottomControls').style.display = 'none';
+        return;
+    }
     userGistId = await findUserGist();
-    if(userGistId) {
-        $('welcomeScreen').style.display = 'none';
-        seedHistory();
-        updateSaveState();
-        $('uiControls').style.display = 'flex';
-        $('bottomControls').style.display = 'flex';
-        await refreshFileList();
-        const routeFromUrl = getRouteFromUrl();
-        if (routeFromUrl) {
-            const exists = settingsRouteFiles.includes(routeFromUrl);
-            if (!exists) await api(`https://api.github.com/gists/${userGistId}`, 'PATCH', { files: { [routeFromUrl]: { content: "[]" } } });
-            await refreshFileList();
-            await loadRoute(routeFromUrl);
-        } else if (settingsRouteFiles.length) {
-            await loadRoute(settingsRouteFiles[0]);
-        } else {
-            showToast("Создайте первый маршрут в настройках", 'info');
-            openSettingsModal();
+    if(!userGistId) {
+        // Гист не найден - создаём новый
+        const created = await ensureUserGist();
+        if(!created || !userGistId) {
+            showToast("Ошибка создания гиста", 'error');
+            $('welcomeScreen').style.display = 'flex';
+            $('uiControls').style.display = 'none';
+            $('bottomControls').style.display = 'none';
+            return;
         }
-        showToast("Вход выполнен", 'success');
+        showToast("Гист создан", 'success');
+    }
+    $('welcomeScreen').style.display = 'none';
+    seedHistory();
+    updateSaveState();
+    $('uiControls').style.display = 'flex';
+    $('bottomControls').style.display = 'flex';
+    await refreshFileList();
+    const routeFromUrl = getRouteFromUrl();
+    if (routeFromUrl) {
+        const exists = settingsRouteFiles.includes(routeFromUrl);
+        if (!exists) await api(`https://api.github.com/gists/${userGistId}`, 'PATCH', { files: { [routeFromUrl]: { content: "[]" } } });
+        await refreshFileList();
+        await loadRoute(routeFromUrl);
+    } else if (settingsRouteFiles.length) {
+        await loadRoute(settingsRouteFiles[0]);
     } else {
-        $('welcomeScreen').style.display = 'none';
-        seedHistory();
-        updateSaveState();
-        $('uiControls').style.display = 'flex';
-        $('bottomControls').style.display = 'flex';
         showToast("Создайте первый маршрут в настройках", 'info');
         openSettingsModal();
+    }
+    showToast("Вход выполнен", 'success');
+};
+
+window.saveToken = () => {
+    const token = $('tokenInput').value.trim();
+    if (!token || token.length < 10) {
+        showToast("Токен должен содержать минимум 10 символов", 'error');
+        return;
+    }
+    saveTokenToStorage(token);
+    authToken = token;
+    $('tokenInput').value = '';
+    handleInitialAuth();
+};
+
+window.logout = () => {
+    if (confirm("Вы уверены? Токен будет удалён, и вы вернётесь на экран входа.")) {
+        clearTokenFromStorage();
+        authToken = "";
+        userGistId = null;
+        curFile = null;
+        points = [];
+        clearRouteObjects();
+        $('welcomeScreen').style.display = 'flex';
+        $('uiControls').style.display = 'none';
+        $('bottomControls').style.display = 'none';
+        toggleM('settingsModal');
+        showToast("Выход выполнен", 'success');
     }
 };
 const findUserGist = async () => {
@@ -645,7 +683,7 @@ const shareActiveRoute = () => {
         showToast("Список команд и ссылка скопированы", 'success');
     });
 };
-const launchNavigatorWithCurrentRoute = () => { if(!curFile) return; const routeName = curFile.replace('.json',''); const token = getTokenFromUrl(); if(!token) { showToast('Ошибка: токен не найден', 'error'); return; } const t = token.slice(0, 10); window.location.href = `index.html?vk_app_id=${encodeURIComponent(t)}&route=${encodeURIComponent(routeName)}`; };
+const launchNavigatorWithCurrentRoute = () => { if(!curFile) return; const routeName = curFile.replace('.json',''); window.location.href = `index.html?route=${encodeURIComponent(routeName)}`; };
 const openSettingsModal = () => { refreshFileList(); toggleM('settingsModal'); };
 const onSettingsRouteSelect = async (e) => { const fn = e.target.value || ''; if (!fn || fn === curFile) return; await loadRoute(fn); };
 const toggleM = id => { const m = $(id); m.style.display = (m.style.display === 'none' || !m.style.display) ? 'flex' : 'none'; };
@@ -854,6 +892,20 @@ async function saveGist() {
         showToast('Ошибка: ' + e.message, 'error');
     }
 }
+
+// Экспорт функций в глобальную область для onclick обработчиков
+window.openPointsOrderModal = openPointsOrderModal;
+window.openSettingsModal = openSettingsModal;
+window.toggleGpsMode = toggleGpsMode;
+window.handleAddBtnClick = handleAddBtnClick;
+window.saveGist = saveGist;
+window.closeD = closeD;
+window.toggleM = toggleM;
+window.handleModalSave = handleModalSave;
+window.renameActiveRoute = renameActiveRoute;
+window.shareActiveRoute = shareActiveRoute;
+window.deleteActiveRoute = deleteActiveRoute;
+window.launchNavigatorWithCurrentRoute = launchNavigatorWithCurrentRoute;
 </script>
 </body>
 </html>
