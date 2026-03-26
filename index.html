@@ -389,12 +389,24 @@ vkBridge.send('VKWebAppInit').then(() => {
 vkBridge.send('VKWebAppGetUserInfo').then((data) => {
     window.vkUser = data;
     console.log('VK User:', data);
+    // Обновляем данные пользователя после загрузки
+    const identity = getUserIdentity();
+    window.USER_ID = identity.id;
+    window.USER_NAME = identity.name;
+    window.USER_UNAME = identity.username;
+    window.GIST_DESC = `[${identity.id}] VK User: ${identity.name} ${identity.username}`;
 }).catch((err) => {
     console.log('VK User info not available:', err);
 });
 
 ymaps.ready(async () => {
-    $('userIdBadge').textContent = `VK ID: ${USER_ID}`;
+    // Ждём загрузки данных VK (до 2 секунд)
+    for(let i = 0; i < 20 && !window.vkUser; i++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    const userId = window.USER_ID || USER_ID;
+    $('userIdBadge').textContent = `VK ID: ${userId}`;
 
     const center = await initMapWithGeolocation();
     map = new ymaps.Map("map", { center: center, zoom: 17, type: 'yandex#satellite', controls: [] });
@@ -542,6 +554,7 @@ window.logout = () => {
     }
 };
 const findUserGist = async () => {
+    const userId = window.USER_ID || USER_ID;
     let allGists = [];
     let page = 1;
     const perPage = 100;
@@ -553,11 +566,13 @@ const findUserGist = async () => {
         page++;
     }
     if(!allGists) return null;
-    const ex = allGists.find(g => g.description?.includes(`[${USER_ID}]`));
+    const ex = allGists.find(g => g.description?.includes(`[${userId}]`));
     return ex ? ex.id : null;
 };
 
 const ensureUserGist = async () => {
+    const userId = window.USER_ID || USER_ID;
+    const gistDesc = window.GIST_DESC || GIST_DESC;
     if(userGistId) return true;
     let allGists = [];
     let page = 1;
@@ -570,9 +585,9 @@ const ensureUserGist = async () => {
         page++;
     }
     if(!allGists) return false;
-    const ex = allGists.find(g => g.description?.includes(`[${USER_ID}]`));
+    const ex = allGists.find(g => g.description?.includes(`[${userId}]`));
     if(ex) { userGistId = ex.id; return true; }
-    const cr = await api('https://api.github.com/gists', 'POST', { description: GIST_DESC, public: true, files: { ".init": { content: buildInitFileContent({ source: 'vk_mini_app' }) } } });
+    const cr = await api('https://api.github.com/gists', 'POST', { description: gistDesc, public: true, files: { ".init": { content: buildInitFileContent({ source: 'vk_mini_app' }) } } });
     if(cr) { userGistId = cr.id; return true; }
     return false;
 };
