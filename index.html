@@ -497,34 +497,16 @@ const handleInitialAuth = async () => {
     console.log('Token valid, searching for gist...');
     userGistId = await findUserGist();
     if(!userGistId) {
-        // Гист не найден - создаём новый
-        const created = await ensureUserGist();
-        if(!created || !userGistId) {
-            showToast("Ошибка создания гиста", 'error');
-            $('welcomeScreen').style.display = 'flex';
-            $('uiControls').style.display = 'none';
-            $('bottomControls').style.display = 'none';
-            return;
-        }
-        showToast("Гист создан", 'success');
+        // Гист не найден - не создаём автоматически, пользователь создаст при создании маршрута
+        console.log('Gist not found, will create on first route creation');
     }
     $('welcomeScreen').style.display = 'none';
     seedHistory();
     updateSaveState();
     $('uiControls').style.display = 'flex';
     $('bottomControls').style.display = 'flex';
-    await refreshFileList();
-    const routeFromUrl = getRouteFromUrl();
-    if (routeFromUrl) {
-        const exists = settingsRouteFiles.includes(routeFromUrl);
-        if (!exists) await api(`https://api.github.com/gists/${userGistId}`, 'PATCH', { files: { [routeFromUrl]: { content: "[]" } } });
+    if(userGistId) {
         await refreshFileList();
-        await loadRoute(routeFromUrl);
-    } else if (settingsRouteFiles.length) {
-        await loadRoute(settingsRouteFiles[0]);
-    } else {
-        showToast("Создайте первый маршрут в настройках", 'info');
-        openSettingsModal();
     }
     showToast("Вход выполнен", 'success');
 };
@@ -609,6 +591,12 @@ const renderSettingsFileList = () => {
     sel.value = curFile || "";
 };
 const refreshFileList = async () => {
+    if(!userGistId) {
+        settingsRouteFiles = [];
+        renderSettingsFileList();
+        updateVisibility();
+        return;
+    }
     const g = await api(`https://api.github.com/gists/${userGistId}?t=${Date.now()}`); if(!g) return;
     settingsRouteFiles = Object.keys(g.files).filter(fn => fn.endsWith('.json')).sort((a, b) => a.localeCompare(b));
     renderSettingsFileList();
